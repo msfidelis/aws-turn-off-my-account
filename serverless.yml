@@ -1,54 +1,39 @@
-service: serverless-go
-
-frameworkVersion: '>=1.28.0 <2.0.0'
+service: aws-turn-off-my-account
 
 provider:
   name: aws
   runtime: go1.x
-  stage: ${opt:stage, 'dev'}
-  timeout: 10
+  stage: ${opt:stage, 'prod'}
+  timeout: 300
   memorySize: 256
   versionFunctions: false
 
   tags:
-    GLOBAL-TAG1: foo
-    GLOBAL-TAG2: bar
+    GLOBALTAG1: foo
+    GLOBALTAG2: bar
 
-  # Permissions for all of your functions can be set here
   iamRoleStatements:
 
-  # Gives permission to DynamoDB tables in a specific region
   - Effect: Allow
     Action:
-      - dynamodb:DescribeTable
-      - dynamodb:Query
-      - dynamodb:Scan
-      - dynamodb:GetItem
-      - dynamodb:PutItem
-      - dynamodb:UpdateItem
-      - dynamodb:DeleteItem
-    Resource: "arn:aws:dynamodb:*:*:*"
-
-  # Gives permission to SQS
-  - Effect: Allow
-    Action:
-      - sqs:GetQueueUrl
-      - sqs:DeleteMessage
-      - sqs:ReceiveMessage
-      - sqs:SendMessage
-    Resource: arn:aws:sqs:*:*:*
-
-  package:
-    exclude:
-      - ./**
-      - .git/**
-      - .vscode/**
-      - .test/**
-    include:
-      - ./bin/**
+      - ec2:*
+      - rds:*
+      - sqs:*
+      - cloudwatch:*
+      - logs:* 
+    Resource: "*"
 
   environment:
     ${file(./configs/${self:provider.stage}.yml)}
+
+package:
+  exclude:
+    - ./**
+    - .git/**
+    - .vscode/**
+    - .test/**
+  include:
+    - ./bin/**
 
 custom:
   region: ${self:provider.region}
@@ -58,76 +43,5 @@ custom:
   sqs-books-name: ${self:custom.prefix}-processing-queue
 
 functions:
-  create:
-    handler: bin/books/endpoints/create
-    events:
-      - http:
-          path: books
-          method: post
-    tags:
-      TAGFUNCTION: Tag Value
-
-  read:
-    handler: bin/books/endpoints/read
-    events:
-      - http:
-          path: books
-          method: get
-
-  read_detail:
-    handler: bin/books/endpoints/detail
-    events:
-      - http:
-          path: books/{hashkey}
-          method: get
-
-  update:
-    handler: bin/books/endpoints/update
-    events:
-      - http:
-          path: books/{hashkey}
-          method: put
-
-  delete:
-    handler: bin/books/endpoints/delete
-    events:
-      - http:
-          path: books/{hashkey}
-          method: delete
-
   worker:
-    handler: bin/books/functions/worker
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - BooksQueueExample
-              - Arn
-          batchSize: 10
-
-
-# CloudFormation template syntax
-resources:
-  Resources:
-    #DynamoDB Books Table
-    BooksCatalog:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:custom.dynamo-books-name}
-        AttributeDefinitions:
-          - AttributeName: hashkey
-            AttributeType: S
-        KeySchema:
-          - AttributeName: hashkey
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits:  10
-          WriteCapacityUnits: 10
-
-    # SQS Queue to Update DynamoDB
-    BooksQueueExample:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: ${self:custom.sqs-books-name}
-        MessageRetentionPeriod: 1209600
-        VisibilityTimeout: 120
+    handler: bin/worker

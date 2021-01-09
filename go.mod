@@ -1,4 +1,4 @@
-module serverless-architecture-boilerplate-go
+module aws-turn-off-my-account
 
 go 1.12
 
