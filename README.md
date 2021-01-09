@@ -8,7 +8,9 @@ Lambda stack to turn off all account resources to avoid billing surprises
 * Clone this repo 
 
 ```bash
-git clone ghttps://github.com/msfidelis/aws-turn-off-my-account.git
+cd $GOPATH/src
+git clone https://github.com/msfidelis/aws-turn-off-my-account.git
+cd aws-turn-off-my-account
 ```
 
 * Edit your preferences in `configs/prod.yml` and customize your cron rate on `serverless.yml`
@@ -19,3 +21,6 @@ git clone ghttps://github.com/msfidelis/aws-turn-off-my-account.git
 make deploy 
 ```
 
+### Using console 
+
+> Guenta ae 
