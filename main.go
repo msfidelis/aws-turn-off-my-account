@@ -10,17 +10,21 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elbv2"
 )
 
 type Response events.APIGatewayProxyResponse
 
 var (
 	ec2Svc *ec2.EC2
+	elbSvc *elbv2.ELBV2
 )
 
 func Handler(ctx context.Context) error {
 	//Handle
 	ec2Handle()
+	albHandle()
+	rdsHandle()
 
 	return nil
 }
@@ -38,12 +42,15 @@ func main() {
 
 	// Services
 	ec2Svc = ec2.New(sess)
+	elbSvc = elbv2.New(sess)
 
 	// Handle Lambda
 	lambda.Start(Handler)
 }
 
 func ec2Handle() {
+
+	fmt.Println("Searching for EC2 Instances")
 
 	// Terminate EC2
 	instances, err := getEc2Instances()
@@ -56,9 +63,39 @@ func ec2Handle() {
 
 }
 
-func albHandle() {}
+func albHandle() {
+	fmt.Println("Searching for ALB / ELB / NLBs Instances")
+
+	instances, err := getLoadBalancersInstances()
+
+	if err != nil {
+		panic(err)
+	}
+
+	terminateLoadBalancers(instances)
+}
 
 func rdsHandle() {}
+
+func getLoadBalancersInstances() ([]*string, error) {
+
+	var instances []*string
+
+	input := &elbv2.DescribeLoadBalancersInput{}
+	result, err := elbSvc.DescribeLoadBalancers(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, lb := range result.LoadBalancers {
+		fmt.Println(*lb.LoadBalancerArn)
+		instances = append(instances, lb.LoadBalancerArn)
+	}
+
+	return instances, nil
+
+}
 
 func getEc2Instances() ([]*string, error) {
 
@@ -97,13 +134,32 @@ func terminateInstances(instances []*string) {
 	resp, err := ec2Svc.TerminateInstances(params)
 
 	if err != nil {
-		fmt.Printf("Failed to cancel spot instance reqs", err)
+		fmt.Printf("Failed to terminate instance", err)
 	}
 
 	for _, ti := range resp.TerminatingInstances {
 		fmt.Printf("Instance: %s \n\nStatus: %s", *ti.InstanceId, ti.CurrentState.String())
 	}
 
+}
+
+func terminateLoadBalancers(instances []*string) {
+
+	for _, instance := range instances {
+
+		params := &elbv2.DeleteLoadBalancerInput{
+			LoadBalancerArn: instance,
+		}
+
+		resp, err := elbSvc.DeleteLoadBalancer(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate lb", err)
+		}
+
+		fmt.Println(resp)
+
+	}
 }
 
 func getAWSSession(region string) (*session.Session, error) {
