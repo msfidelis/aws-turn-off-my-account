@@ -1,5 +1,6 @@
-# aws-turn-off-my-account
-Lambda stack to turn off all account resources to avoid billing surprises
+# AWS, Turn off my Account, please 
+
+Lambda stack to turn off and destroy all resources from your personal AWS Account to avoid billing surprises
 
 ## Installation
 
