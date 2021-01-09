@@ -17,6 +17,7 @@ provider:
       - sqs:*
       - cloudwatch:*
       - logs:* 
+      - elasticloadbalancing:*
     Resource: "*"
 
   environment:

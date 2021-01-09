@@ -44,3 +44,5 @@ make deploy
 * Cloudformation Setup
 
 * Tests 
+
+* IAM Closed permissions
