@@ -1,0 +1,4 @@
+ENV: dev
+REGION: ${self:custom.region}
+DYNAMO_TABLE_BOOKS: ${self:custom.dynamo-books-name}
+SQS_QUEUE_BOOKS: ${self:custom.sqs-books-name}
