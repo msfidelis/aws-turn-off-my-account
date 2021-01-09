@@ -25,3 +25,14 @@ make deploy
 ### Using console 
 
 > Guenta ae 
+
+
+### TODO
+
+* Release ZIP 
+
+* Console setup 
+
+* Cloudformation Setup
+
+* Tests 
