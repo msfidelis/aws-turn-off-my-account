@@ -2,6 +2,14 @@
 
 Lambda stack to turn off and destroy all resources from your personal AWS Account to avoid billing surprises
 
+## Resources Roadmap
+
+* EC2 :check: 
+* ALB, ELB, NLB
+* RDS
+* DocumentDB
+* NAT Gateways
+
 ## Installation
 
 ### Using Serverless Framework 
