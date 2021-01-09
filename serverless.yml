@@ -8,10 +8,6 @@ provider:
   memorySize: 256
   versionFunctions: false
 
-  tags:
-    GLOBALTAG1: foo
-    GLOBALTAG2: bar
-
   iamRoleStatements:
 
   - Effect: Allow
@@ -39,9 +35,10 @@ custom:
   region: ${self:provider.region}
   stage:  ${opt:stage, self:provider.stage}
   prefix: ${self:custom.stage}-${self:service}
-  dynamo-books-name: ${self:custom.prefix}-books-catalog
-  sqs-books-name: ${self:custom.prefix}-processing-queue
 
 functions:
   worker:
     handler: bin/worker
+    events:
+      - schedule: rate(2 hours)
+      - schedule: cron(0 12 * * ? *)     

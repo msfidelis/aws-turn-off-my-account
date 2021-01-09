@@ -19,11 +19,31 @@ var (
 )
 
 func Handler(ctx context.Context) error {
+	//Handle
+	ec2Handle()
+
+	return nil
+}
+
+func main() {
+
 	region := os.Getenv("REGION")
 
 	//Prepare
 	sess, err := getAWSSession(region)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// Services
 	ec2Svc = ec2.New(sess)
+
+	// Handle Lambda
+	lambda.Start(Handler)
+}
+
+func ec2Handle() {
 
 	// Terminate EC2
 	instances, err := getEc2Instances()
@@ -34,12 +54,11 @@ func Handler(ctx context.Context) error {
 
 	terminateInstances(instances)
 
-	return nil
 }
 
-func main() {
-	lambda.Start(Handler)
-}
+func albHandle() {}
+
+func rdsHandle() {}
 
 func getEc2Instances() ([]*string, error) {
 
