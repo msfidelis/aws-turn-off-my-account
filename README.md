@@ -6,7 +6,7 @@ Lambda stack to turn off and destroy all resources from your personal AWS Accoun
 
 * EC2 :white_check_mark:
 * ALB, ELB, NLB :white_check_mark: 
-* RDS :white_check_mark: 
+* RDS Instances and Clusters :white_check_mark: 
 * DocumentDB
 * NAT Gateways
 
@@ -46,3 +46,5 @@ make deploy
 * Tests 
 
 * IAM Closed permissions
+
+* Logs

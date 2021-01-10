@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -47,9 +48,7 @@ func main() {
 	rdsSvc = rds.New(sess)
 
 	// Handle Lambda
-	// lambda.Start(Handler)
-
-	rdsHandle()
+	lambda.Start(Handler)
 }
 
 func ec2Handle() {
@@ -85,7 +84,14 @@ func rdsHandle() {
 		panic(err)
 	}
 
+	clusters, err := getRDSClusters()
+
+	if err != nil {
+		panic(err)
+	}
+
 	terminateRDSInstances(instances)
+	terminateRDSClusters(clusters)
 }
 
 func getLoadBalancersInstances() ([]*string, error) {
@@ -100,7 +106,6 @@ func getLoadBalancersInstances() ([]*string, error) {
 	}
 
 	for _, lb := range result.LoadBalancers {
-		fmt.Println(*lb.LoadBalancerArn)
 		instances = append(instances, lb.LoadBalancerArn)
 	}
 
@@ -147,6 +152,22 @@ func getRDSInstances() ([]*string, error) {
 
 	for _, rds := range result.DBInstances {
 		instances = append(instances, rds.DBInstanceIdentifier)
+	}
+
+	return instances, nil
+}
+
+func getRDSClusters() ([]*string, error) {
+	var instances []*string
+
+	result, err := rdsSvc.DescribeDBClusters(nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rds := range result.DBClusters {
+		instances = append(instances, rds.DBClusterIdentifier)
 	}
 
 	return instances, nil
@@ -201,6 +222,23 @@ func terminateRDSInstances(instances []*string) {
 
 		if err != nil {
 			fmt.Printf("Failed to terminate RDS", err)
+		}
+
+	}
+}
+
+func terminateRDSClusters(instances []*string) {
+	for _, instance := range instances {
+
+		params := &rds.DeleteDBClusterInput{
+			DBClusterIdentifier: instance,
+			SkipFinalSnapshot:   aws.Bool(true),
+		}
+
+		_, err := rdsSvc.DeleteDBCluster(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate RDS Cluster", err)
 		}
 
 	}
