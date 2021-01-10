@@ -18,6 +18,7 @@ provider:
       - cloudwatch:*
       - logs:* 
       - elasticloadbalancing:*
+      - rds:*
     Resource: "*"
 
   environment:

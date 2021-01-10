@@ -6,11 +6,11 @@ import (
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/aws/aws-sdk-go/service/rds"
 )
 
 type Response events.APIGatewayProxyResponse
@@ -18,6 +18,7 @@ type Response events.APIGatewayProxyResponse
 var (
 	ec2Svc *ec2.EC2
 	elbSvc *elbv2.ELBV2
+	rdsSvc *rds.RDS
 )
 
 func Handler(ctx context.Context) error {
@@ -43,16 +44,17 @@ func main() {
 	// Services
 	ec2Svc = ec2.New(sess)
 	elbSvc = elbv2.New(sess)
+	rdsSvc = rds.New(sess)
 
 	// Handle Lambda
-	lambda.Start(Handler)
+	// lambda.Start(Handler)
+
+	rdsHandle()
 }
 
 func ec2Handle() {
-
 	fmt.Println("Searching for EC2 Instances")
 
-	// Terminate EC2
 	instances, err := getEc2Instances()
 
 	if err != nil {
@@ -60,7 +62,6 @@ func ec2Handle() {
 	}
 
 	terminateInstances(instances)
-
 }
 
 func albHandle() {
@@ -75,7 +76,17 @@ func albHandle() {
 	terminateLoadBalancers(instances)
 }
 
-func rdsHandle() {}
+func rdsHandle() {
+	fmt.Println("Searching for RDS Instances")
+
+	instances, err := getRDSInstances()
+
+	if err != nil {
+		panic(err)
+	}
+
+	terminateRDSInstances(instances)
+}
 
 func getLoadBalancersInstances() ([]*string, error) {
 
@@ -125,6 +136,22 @@ func getEc2Instances() ([]*string, error) {
 	return instances, nil
 }
 
+func getRDSInstances() ([]*string, error) {
+	var instances []*string
+
+	result, err := rdsSvc.DescribeDBInstances(nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rds := range result.DBInstances {
+		instances = append(instances, rds.DBInstanceIdentifier)
+	}
+
+	return instances, nil
+}
+
 func terminateInstances(instances []*string) {
 
 	params := &ec2.TerminateInstancesInput{
@@ -158,6 +185,23 @@ func terminateLoadBalancers(instances []*string) {
 		}
 
 		fmt.Println(resp)
+
+	}
+}
+
+func terminateRDSInstances(instances []*string) {
+	for _, instance := range instances {
+
+		params := &rds.DeleteDBInstanceInput{
+			DBInstanceIdentifier: instance,
+			SkipFinalSnapshot:    aws.Bool(true),
+		}
+
+		_, err := rdsSvc.DeleteDBInstance(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate RDS", err)
+		}
 
 	}
 }
