@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 type Response events.APIGatewayProxyResponse
@@ -20,6 +21,7 @@ var (
 	ec2Svc *ec2.EC2
 	elbSvc *elbv2.ELBV2
 	rdsSvc *rds.RDS
+	stsSvc *sts.STS
 )
 
 func Handler(ctx context.Context) error {
@@ -46,6 +48,7 @@ func main() {
 	ec2Svc = ec2.New(sess)
 	elbSvc = elbv2.New(sess)
 	rdsSvc = rds.New(sess)
+	stsSvc = sts.New(sess)
 
 	// Handle Lambda
 	lambda.Start(Handler)
@@ -61,6 +64,16 @@ func ec2Handle() {
 	}
 
 	terminateInstances(instances)
+
+	fmt.Println("Searching for Snapshots")
+
+	snapshots, err := getEc2Snapshots()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	terminateSnapShots(snapshots)
 }
 
 func albHandle() {
@@ -141,6 +154,41 @@ func getEc2Instances() ([]*string, error) {
 	return instances, nil
 }
 
+func getEc2Snapshots() ([]*string, error) {
+
+	var snapshots []*string
+
+	account, err := getAWSAccount()
+
+	if err != nil {
+		return nil, err
+	}
+
+	filters := []*ec2.Filter{
+		{
+			Name: aws.String("owner-id"),
+			Values: []*string{
+				aws.String(account),
+			},
+		},
+	}
+
+	input := &ec2.DescribeSnapshotsInput{Filters: filters}
+
+	result, err := ec2Svc.DescribeSnapshots(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, snapshot := range result.Snapshots {
+		snapshots = append(snapshots, snapshot.SnapshotId)
+	}
+
+	return snapshots, nil
+
+}
+
 func getRDSInstances() ([]*string, error) {
 	var instances []*string
 
@@ -175,37 +223,54 @@ func getRDSClusters() ([]*string, error) {
 
 func terminateInstances(instances []*string) {
 
-	params := &ec2.TerminateInstancesInput{
-		InstanceIds: instances,
-	}
+	if len(instances) == 0 {
+		fmt.Println("No more EC2 instances to destroy")
+	} else {
 
-	resp, err := ec2Svc.TerminateInstances(params)
+		params := &ec2.TerminateInstancesInput{
+			InstanceIds: instances,
+		}
 
-	if err != nil {
-		fmt.Printf("Failed to terminate instance", err)
-	}
+		resp, err := ec2Svc.TerminateInstances(params)
 
-	for _, ti := range resp.TerminatingInstances {
-		fmt.Printf("Instance: %s \n\nStatus: %s", *ti.InstanceId, ti.CurrentState.String())
+		if err != nil {
+			fmt.Printf("Failed to terminate instance", err)
+		}
+
+		for _, ti := range resp.TerminatingInstances {
+			fmt.Printf("Instance: %s \n\nStatus: %s", *ti.InstanceId, ti.CurrentState.String())
+		}
+
 	}
 
 }
 
-func terminateLoadBalancers(instances []*string) {
+func terminateSnapShots(snapshots []*string) {
+	for _, snapshot := range snapshots {
+		input := &ec2.DeleteSnapshotInput{
+			SnapshotId: snapshot,
+		}
 
+		_, err := ec2Svc.DeleteSnapshot(input)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate snapshot", err)
+		}
+	}
+}
+
+func terminateLoadBalancers(instances []*string) {
 	for _, instance := range instances {
 
 		params := &elbv2.DeleteLoadBalancerInput{
 			LoadBalancerArn: instance,
 		}
 
-		resp, err := elbSvc.DeleteLoadBalancer(params)
+		_, err := elbSvc.DeleteLoadBalancer(params)
 
 		if err != nil {
 			fmt.Printf("Failed to terminate lb", err)
 		}
-
-		fmt.Println(resp)
 
 	}
 }
@@ -251,4 +316,15 @@ func getAWSSession(region string) (*session.Session, error) {
 
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 	return session.NewSession(awsConfig)
+}
+
+func getAWSAccount() (string, error) {
+	callerInput := &sts.GetCallerIdentityInput{}
+	output, err := stsSvc.GetCallerIdentity(callerInput)
+
+	if err != nil {
+		return "", err
+	}
+
+	return *output.Account, nil
 }
