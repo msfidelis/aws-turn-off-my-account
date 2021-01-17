@@ -74,6 +74,16 @@ func ec2Handle() {
 	}
 
 	terminateSnapShots(snapshots)
+
+	fmt.Println("Searching for EBS Volumes")
+
+	volumes, err := getEBSVolumes()
+
+	if err != nil {
+		panic(err)
+	}
+
+	terminateEBS(volumes)
 }
 
 func albHandle() {
@@ -189,6 +199,22 @@ func getEc2Snapshots() ([]*string, error) {
 
 }
 
+func getEBSVolumes() ([]*string, error) {
+	var volumes []*string
+
+	result, err := ec2Svc.DescribeVolumes(nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, volume := range result.Volumes {
+		volumes = append(volumes, volume.VolumeId)
+	}
+
+	return volumes, nil
+}
+
 func getRDSInstances() ([]*string, error) {
 	var instances []*string
 
@@ -255,6 +281,22 @@ func terminateSnapShots(snapshots []*string) {
 
 		if err != nil {
 			fmt.Printf("Failed to terminate snapshot", err)
+		}
+	}
+}
+
+func terminateEBS(volumes []*string) {
+	for _, volume := range volumes {
+		fmt.Println(*volume)
+
+		params := &ec2.DeleteVolumeInput{
+			VolumeId: volume,
+		}
+
+		_, err := ec2Svc.DeleteVolume(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate EBS", err)
 		}
 	}
 }
