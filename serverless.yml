@@ -13,12 +13,17 @@ provider:
   - Effect: Allow
     Action:
       - ec2:*
-      - rds:*
-      - sqs:*
+      - rds:Describe*
+      - rds:List*
+      - rds:Delete*
+      - sqs:Describe*
+      - sqs:List*
+      - sqs:Delete*
+      - elasticloadbalancing:Describe*
+      - elasticloadbalancing:List*
+      - elasticloadbalancing:Delete*
       - cloudwatch:*
       - logs:* 
-      - elasticloadbalancing:*
-      - rds:*
     Resource: "*"
 
   environment:

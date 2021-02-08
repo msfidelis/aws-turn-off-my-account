@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:CreateLogGroup",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ec2:*",
+                "rds:Describe*",
+                "rds:List*",
+                "rds:Delete*",
+                "sqs:Describe*",
+                "sqs:List*",
+                "sqs:Delete*",
+                "elasticloadbalancing:Describe*",
+                "elasticloadbalancing:List*",
+                "elasticloadbalancing:Delete*",
+                "cloudwatch:*",
+                "logs:*"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
