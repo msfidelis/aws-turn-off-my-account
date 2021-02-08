@@ -2,6 +2,8 @@
 
 Lambda stack to turn off and destroy all resources from your personal AWS Account to avoid billing surprises
 
+![Billing Modaf&*@&#](/.github/img/card.jpeg)
+
 ## Resources Roadmap
 
 * EC2 :white_check_mark:
