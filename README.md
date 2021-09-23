@@ -10,6 +10,7 @@ Lambda stack to turn off and destroy all resources from your personal AWS Accoun
 * EBS and Snapshots :white_check_mark:
 * ALB, ELB, NLB :white_check_mark: 
 * RDS Instances and Clusters :white_check_mark: 
+* Elasticache Clusters and Replication Groups :white_check_mark: 
 * Elastic IP's
 * DocumentDB
 * NAT Gateways
