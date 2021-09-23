@@ -24,6 +24,7 @@ provider:
       - elasticloadbalancing:Delete*
       - cloudwatch:*
       - logs:* 
+      - elasticache:*
     Resource: "*"
 
   environment:

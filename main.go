@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/elasticache"
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
@@ -22,6 +23,7 @@ var (
 	elbSvc *elbv2.ELBV2
 	rdsSvc *rds.RDS
 	stsSvc *sts.STS
+	elcSvc *elasticache.ElastiCache
 )
 
 func Handler(ctx context.Context) error {
@@ -29,6 +31,7 @@ func Handler(ctx context.Context) error {
 	ec2Handle()
 	albHandle()
 	rdsHandle()
+	elasticacheHandle()
 
 	return nil
 }
@@ -49,9 +52,11 @@ func main() {
 	elbSvc = elbv2.New(sess)
 	rdsSvc = rds.New(sess)
 	stsSvc = sts.New(sess)
+	elcSvc = elasticache.New(sess)
 
 	// Handle Lambda
 	lambda.Start(Handler)
+	// elasticacheHandle()
 }
 
 func ec2Handle() {
@@ -116,6 +121,69 @@ func rdsHandle() {
 	terminateRDSInstances(instances)
 	terminateRDSClusters(clusters)
 }
+
+func elasticacheHandle() {
+	fmt.Println("Searching for Elasticache Clusters")
+
+	clusters, err := getElasticacheClusters()
+
+	if err != nil {
+		panic(err)
+	}
+
+	terminateElasticacheClusters(clusters)
+
+	fmt.Println("Searching for Elasticache Repliocation Groups")
+
+	groups, err := getReplicationGroups()
+
+	if err != nil {
+		panic(err)
+	}
+
+	terminateReplicationGroups(groups)
+}
+
+
+func getElasticacheClusters() ([]*string, error) {
+
+	var instances []*string
+
+	input := &elasticache.DescribeCacheClustersInput{}
+	result, err := elcSvc.DescribeCacheClusters(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cluster := range result.CacheClusters {
+		if (*cluster.CacheClusterStatus == "available") {
+			instances = append(instances, cluster.CacheClusterId)
+		}
+	}
+
+	return instances, nil
+
+}
+
+func getReplicationGroups() ([]*string, error) {
+
+	var instances []*string
+
+	input := &elasticache.DescribeReplicationGroupsInput{}
+	result, err := elcSvc.DescribeReplicationGroups(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rpg := range result.ReplicationGroups {
+		instances = append(instances, rpg.ReplicationGroupId)
+	}
+
+	return instances, nil 
+}
+
 
 func getLoadBalancersInstances() ([]*string, error) {
 
@@ -346,6 +414,36 @@ func terminateRDSClusters(instances []*string) {
 
 		if err != nil {
 			fmt.Printf("Failed to terminate RDS Cluster", err)
+		}
+
+	}
+}
+
+func terminateElasticacheClusters(clusters []*string) {
+	for _, cluster := range clusters {
+		params := &elasticache.DeleteCacheClusterInput{
+			CacheClusterId: cluster,
+		}
+
+		_, err := elcSvc.DeleteCacheCluster(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate Replication Group", err)
+		}
+
+	}
+}
+
+func terminateReplicationGroups(groups []*string) {
+	for _, group := range groups {
+		params := &elasticache.DeleteReplicationGroupInput{
+			ReplicationGroupId: group,
+		}
+
+		_, err := elcSvc.DeleteReplicationGroup(params)
+
+		if err != nil {
+			fmt.Printf("Failed to terminate Cache Cluster", err)
 		}
 
 	}
